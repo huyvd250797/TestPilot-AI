@@ -5,6 +5,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const Req = z.object({
+  platform: z.enum(["web", "windows"]).default("web"),
   title: z.string(),
   story: z.string(),
   criteria: z.array(z.string()).min(1),
@@ -71,13 +72,16 @@ export async function POST(req: Request) {
 Rules:
 - Acceptance Criteria are the source of truth.
 - Never promote an assumption to a requirement.
-- Create practical browser-executable steps. Each important outcome must be verified, not merely clicked.
+- Create practical black-box UI-executable steps for the requested platform. Each important outcome must be verified, not merely clicked.
+- For Windows, describe controls semantically (visible label/button/menu/field) and do not rely on pixel coordinates.
+- For Web, describe browser-visible controls semantically.
 - If the system is expected to generate an ID/code, add a capture step with captureKey and reference it later as \${captureKey}.
 - For uniqueness/persistence ACs, verify the final persisted state, e.g. return to list/search and confirm the correct record count/state.
 - Prefer generated test data with AUTO_QA namespace when business format allows it.
 - Do not include passwords or secrets in testData.
 - Keep 1-3 high-value cases per AC for this MVP.
 
+Target platform: ${body.platform}
 User Story title: ${body.title}
 User Story: ${body.story}
 Acceptance Criteria:
