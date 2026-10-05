@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1 — Vercel Build Fix
+
+- Added `serverExternalPackages` for Stagehand and Browserbase SDK.
+- Added output-file tracing for the Stagehand v4 browser extension.
+- Switched the Web Runner to Stagehand v4 `browserbase.launch()`.
+- Aligned Zod to v4 and pinned Stagehand/Browserbase dependencies.
+- Added optional/recommended `BROWSERBASE_PROJECT_ID` configuration.
+- Kept login secrets out of natural-language AI instructions where possible.
+
 ## 1.1.0 — Web Execution MVP
 
 - Rebranded the application to TestPilot AI.

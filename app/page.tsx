@@ -22,7 +22,7 @@ export default function Home() {
 
     <div className="two wideLeft">
       <section className="card">
-        <div className="sectionHead"><div><div className="eyebrow">Execution pipeline</div><h2>How TestPilot V1.1 works</h2></div><span className="badge">LIVE UI TESTING</span></div>
+        <div className="sectionHead"><div><div className="eyebrow">Execution pipeline</div><h2>How TestPilot V1.1.1 works</h2></div><span className="badge">LIVE UI TESTING</span></div>
         <div className="timeline">{flow.map(([n,t,d]) => <div className="timelineItem" key={n}><span>{n}</span><div><b>{t}</b><small>{d}</small></div></div>)}</div>
       </section>
       <section className="card accentCard">
@@ -32,7 +32,7 @@ export default function Home() {
     </div>
 
     <section className="card sectionGap">
-      <div className="sectionHead"><div><div className="eyebrow">V1.1 architecture</div><h2>Vercel-ready, browser execution stays isolated</h2></div></div>
+      <div className="sectionHead"><div><div className="eyebrow">V1.1.1 architecture</div><h2>Vercel-ready, browser execution stays isolated</h2></div></div>
       <div className="arch"><div>Vercel<br/><small>Next.js Control Plane</small></div><b>→</b><div>TestPilot Brain<br/><small>Planning & verification</small></div><b>→</b><div>Cloud Chromium<br/><small>Browserbase + Stagehand</small></div><b>→</b><div>Target Web App<br/><small>Real black-box UI</small></div></div>
     </section>
   </AppShell>;

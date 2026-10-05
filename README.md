@@ -1,4 +1,4 @@
-# TestPilot AI V1.1 — Web Execution MVP
+# TestPilot AI V1.1.1 — Web Execution MVP (Vercel Build Fix)
 
 **TestPilot AI** converts User Stories + Acceptance Criteria into executable black-box tests, runs them in an isolated cloud browser, captures outputs and screenshots, and produces auditable PASS / FAIL / BLOCKED evidence.
 
@@ -16,6 +16,17 @@ V1.0 was the control-plane foundation. V1.1 adds the first real execution path:
 - PASS / FAIL / BLOCKED execution status.
 - Persisted execution steps and runtime context.
 - Human-review-oriented replay UI foundation.
+
+
+## V1.1.1 Vercel build fix
+
+This patch aligns the project with the official Stagehand v4 Next.js/Vercel integration:
+
+- `@browserbasehq/stagehand` and `@browserbasehq/sdk` are listed in `serverExternalPackages`.
+- The Stagehand browser extension zip is included in Vercel output-file tracing for `/api/runs/execute`.
+- Browser sessions are created through Stagehand v4 `browserbase.launch()` so the required extension is provisioned.
+- Zod is aligned to v4 and imported as `zod/v4` in the runner.
+- Stagehand/Browserbase dependency versions are pinned for reproducible Vercel builds.
 
 ## Architecture
 
@@ -55,6 +66,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-5.6
 BROWSERBASE_API_KEY=...
+BROWSERBASE_PROJECT_ID=...
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY` and `BROWSERBASE_API_KEY` are server-only secrets.

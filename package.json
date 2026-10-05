@@ -1,6 +1,6 @@
 {
   "name": "testpilot-ai",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "engines": {
     "node": "24.x"
@@ -13,15 +13,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@browserbasehq/stagehand": "^4.1.0",
+    "@browserbasehq/stagehand": "4.1.0",
     "@supabase/supabase-js": "^2.57.4",
     "lucide-react": "^0.468.0",
     "next": "16.3.8",
     "openai": "^6.3.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "zod": "^4.1.11",
-    "@browserbasehq/sdk": "^2.21.0"
+    "zod": "4.4.3",
+    "@browserbasehq/sdk": "2.21.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
