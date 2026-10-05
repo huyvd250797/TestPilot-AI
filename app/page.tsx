@@ -1,3 +1,39 @@
 import Link from "next/link";
-const cases=[{id:"TC-105-01",name:"Create customer with valid data",status:"PASS",src:"AC Direct"},{id:"TC-105-02",name:"Reject duplicate customer code",status:"PASS",src:"AC Direct"},{id:"TC-105-03",name:"Reject invalid email",status:"FAIL",src:"AI Derived"},{id:"TC-105-04",name:"Verify non-admin permission",status:"BLOCKED",src:"AI Derived"}];
-export default function Home(){return <div className="shell"><aside className="side"><div className="brand"><span>AI</span> QA Pilot</div><nav className="nav"><Link className="active" href="/">Dashboard</Link><Link href="/stories/new">User Stories</Link><Link href="/runs/demo">Test Runs</Link><Link href="/setup">Setup</Link></nav></aside><main className="main"><div className="eyebrow">Black-box QA control plane</div><h1 className="title">Test Center</h1><div className="muted">User Story + Acceptance Criteria → test plan → isolated execution → evidence → review.</div><div className="grid"><div className="card"><div className="muted">AC Coverage</div><div className="metric">100%</div></div><div className="card"><div className="muted">Test Cases</div><div className="metric">24</div></div><div className="card"><div className="muted">Pass Rate</div><div className="metric">83%</div></div><div className="card"><div className="muted">Needs Review</div><div className="metric">6</div></div></div><div className="two"><section className="card"><div style={{display:'flex',justifyContent:'space-between'}}><div><b>US-105 · Create Customer</b><div className="muted">Latest planned cases</div></div><Link href="/stories/new"><button className="btn">New Story</button></Link></div><div className="list">{cases.map(c=><div className="row" key={c.id}><div><b>{c.id}</b><div>{c.name}</div><small className="muted">{c.src}</small></div><span className={'badge '+(c.status==='FAIL'?'fail':c.status==='BLOCKED'?'warn':'')}>{c.status}</span></div>)}</div></section><section className="card"><b>Execution architecture</b><div className="steps"><div className="step"><b>Control Plane</b><small>Next.js on Vercel</small></div><div className="step"><b>Web Runner</b><small>Isolated Playwright worker</small></div><div className="step"><b>Windows Runner</b><small>Remote Windows VM agent</small></div><div className="step"><b>Evidence</b><small>Step logs, screenshots, video</small></div></div></section></div><div className="footer">V1 starter · Vercel-ready control plane</div></main></div>}
+import { AppShell } from "@/components/AppShell";
+
+const flow = [
+  ["01", "Design", "User Story + Acceptance Criteria"],
+  ["02", "Plan", "AI creates cases, data and expected outputs"],
+  ["03", "Execute", "Isolated cloud browser manipulates the real UI"],
+  ["04", "Verify", "Expected vs actual + captured runtime outputs"],
+  ["05", "Review", "Screenshots, replay and human QA approval"],
+];
+
+export default function Home() {
+  return <AppShell active="dashboard">
+    <div className="topbar"><div><div className="eyebrow">TestPilot AI · Web Execution MVP</div><h1 className="title">Autonomous QA Control Center</h1><p className="muted lead">From User Story to verified software — without source-code access.</p></div><Link href="/runs/new" className="btn">Run Web Test</Link></div>
+
+    <div className="grid metrics">
+      <div className="card"><div className="muted">Execution mode</div><div className="metric sm">Cloud Browser</div><span className="statusDot ok">Isolated</span></div>
+      <div className="card"><div className="muted">Test lifecycle</div><div className="metric sm">Stateful</div><span className="statusDot ok">Capture & reuse</span></div>
+      <div className="card"><div className="muted">Evidence</div><div className="metric sm">Per Step</div><span className="statusDot ok">Screenshot + replay</span></div>
+      <div className="card"><div className="muted">Human review</div><div className="metric sm">Auditable</div><span className="statusDot ok">Expected vs actual</span></div>
+    </div>
+
+    <div className="two wideLeft">
+      <section className="card">
+        <div className="sectionHead"><div><div className="eyebrow">Execution pipeline</div><h2>How TestPilot V1.1 works</h2></div><span className="badge">LIVE UI TESTING</span></div>
+        <div className="timeline">{flow.map(([n,t,d]) => <div className="timelineItem" key={n}><span>{n}</span><div><b>{t}</b><small>{d}</small></div></div>)}</div>
+      </section>
+      <section className="card accentCard">
+        <div className="eyebrow">Start here</div><h2>First real test</h2><p className="muted">Configure Supabase/OpenAI/Browserbase on Vercel, then enter your target URL and a User Story.</p>
+        <div className="stack"><Link className="btn" href="/setup">1 · Configure Vercel</Link><Link className="btn secondary" href="/projects">2 · Add Target App</Link><Link className="btn secondary" href="/stories/new">3 · Generate Test Plan</Link><Link className="btn secondary" href="/runs/new">4 · Execute Case</Link></div>
+      </section>
+    </div>
+
+    <section className="card sectionGap">
+      <div className="sectionHead"><div><div className="eyebrow">V1.1 architecture</div><h2>Vercel-ready, browser execution stays isolated</h2></div></div>
+      <div className="arch"><div>Vercel<br/><small>Next.js Control Plane</small></div><b>→</b><div>TestPilot Brain<br/><small>Planning & verification</small></div><b>→</b><div>Cloud Chromium<br/><small>Browserbase + Stagehand</small></div><b>→</b><div>Target Web App<br/><small>Real black-box UI</small></div></div>
+    </section>
+  </AppShell>;
+}

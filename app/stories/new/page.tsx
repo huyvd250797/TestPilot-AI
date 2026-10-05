@@ -1,6 +1,45 @@
-"use client"; import {useState} from "react"; import Link from "next/link";
-export default function NewStory(){const [loading,setLoading]=useState(false);const [plan,setPlan]=useState<any>(null);async function go(e:any){e.preventDefault();setLoading(true);const fd=new FormData(e.currentTarget);const r=await fetch('/api/plan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({title:fd.get('title'),story:fd.get('story'),criteria:String(fd.get('criteria')).split('\n').filter(Boolean)})});setPlan(await r.json());setLoading(false)}return <main className="main" style={{margin:'auto'}}><Link href="/" className="muted">← Dashboard</Link><div className="eyebrow" style={{marginTop:24}}>Test design</div><h1 className="title">New User Story</h1><div className="two"><form className="card" onSubmit={go}><label className="label">Title</label><input className="input" name="title" defaultValue="Create Customer"/><label className="label">User Story</label><textarea className="textarea" name="story" defaultValue={'As an Admin, I want to create a customer so that the customer can use the system.'}/><label className="label">Acceptance Criteria · one per line</label><textarea className="textarea" name="criteria" defaultValue={'Customer Code is required.
-Customer Code must be unique.
-Email must have valid format.
-After successful creation, customer appears in Customer List.
-Only Admin can create Customer.'}/><button className="btn" disabled={loading} style={{marginTop:14}}>{loading?'Planning...':'Generate Test Plan'}</button></form><section className="card"><b>AI Test Plan</b><p className="muted">The API uses OpenAI when configured; otherwise a deterministic demo planner keeps the deployment usable.</p>{plan?.cases?.map((c:any,i:number)=><div className="row" key={i}><div><span className="badge">{c.source}</span><b style={{display:'block',marginTop:7}}>{c.title}</b><small className="muted">Expected: {c.expected}</small></div></div>)}</section></div></main>}
+"use client";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppShell } from "@/components/AppShell";
+import type { PlannedCase } from "@/lib/contracts";
+
+export default function NewStory() {
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [plan, setPlan] = useState<{mode?:string; cases: PlannedCase[]; warning?:string} | null>(null);
+  const [meta, setMeta] = useState<any>(null);
+  const router = useRouter();
+  const count = useMemo(() => plan?.cases?.length || 0, [plan]);
+
+  async function generate(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); setLoading(true);
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      projectId: String(fd.get("projectId") || "") || undefined,
+      targetUrl: String(fd.get("targetUrl") || ""),
+      title: String(fd.get("title") || ""),
+      story: String(fd.get("story") || ""),
+      criteria: String(fd.get("criteria") || "").split("\n").map(x=>x.trim()).filter(Boolean),
+    };
+    setMeta(payload);
+    const r = await fetch("/api/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+    setPlan(await r.json()); setLoading(false);
+  }
+
+  async function savePlan() {
+    if (!plan || !meta) return; setSaving(true);
+    const r = await fetch("/api/stories", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId: meta.projectId || undefined, title: meta.title, story: meta.story, criteria: meta.criteria, cases: plan.cases }) });
+    const j = await r.json(); alert(r.ok ? `Saved (${j.mode || "database"})` : (j.error || "Save failed")); setSaving(false);
+  }
+
+  function runCase(testCase: PlannedCase) {
+    sessionStorage.setItem("testpilot:selectedCase", JSON.stringify({ projectId: meta?.projectId || "", targetUrl: meta?.targetUrl || "", case: testCase }));
+    router.push("/runs/new");
+  }
+
+  return <AppShell active="stories"><div className="eyebrow">AI Test Design</div><h1 className="title">User Story → Executable Test Plan</h1><p className="muted lead">Expected results are defined before execution. AI-derived coverage is kept separate from Acceptance Criteria.</p>
+    <div className="two wideLeft sectionGap"><form className="card" onSubmit={generate}><h2>Requirement</h2><label className="label">Project ID <span className="muted">(optional, for persistence)</span></label><input className="input" name="projectId" placeholder="Supabase project UUID"/><label className="label">Target URL</label><input className="input" type="url" name="targetUrl" placeholder="https://uat.example.com" required/><label className="label">Title</label><input className="input" name="title" defaultValue="Create Customer" required/><label className="label">User Story</label><textarea className="textarea" name="story" defaultValue="As an Admin, I want to create a customer so that the customer can use the system." required/><label className="label">Acceptance Criteria · one per line</label><textarea className="textarea tall" name="criteria" defaultValue={'Customer Code is required.\nCustomer Code must be unique.\nEmail must have valid format.\nAfter successful creation, customer appears in Customer List.\nOnly Admin can create Customer.'} required/><button className="btn full" disabled={loading} style={{marginTop:14}}>{loading?"TestPilot is planning...":"Generate Executable Plan"}</button></form>
+      <section className="card"><div className="sectionHead"><div><h2>Plan summary</h2><p className="muted">{count} cases · {plan?.mode || "not generated"}</p></div>{plan && <button className="btn secondary" disabled={saving} onClick={savePlan}>{saving?"Saving...":"Save Plan"}</button>}</div>{plan?.warning && <p className="notice warnBox">{plan.warning}</p>}{!plan?<div className="empty">Generate a plan to see executable cases.</div>:<div className="caseList">{plan.cases.map((c,i)=><article className="testCase" key={i}><div className="caseTop"><div><span className={`badge ${c.source==='Assumption'?'warn':''}`}>{c.source}</span> {c.acRef && <span className="badge neutral">{c.acRef}</span>}<h3>{c.title}</h3></div><button className="btn mini" onClick={()=>runCase(c)}>Run</button></div><p><b>Expected:</b> {c.expected}</p><details><summary>{c.steps.length} execution steps</summary><ol>{c.steps.map((s,j)=><li key={j}><b>{s.kind.toUpperCase()}</b> · {s.instruction}{s.captureKey?<code> → ${"{"}{s.captureKey}{"}"}</code>:null}</li>)}</ol></details></article>)}</div>}</section></div>
+  </AppShell>;
+}
