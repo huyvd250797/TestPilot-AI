@@ -1,4 +1,4 @@
-# TestPilot AI V1.2 — Windows Agent
+# TestPilot AI V1.3 — Windows Agent
 
 The Windows Agent executes authorized WinForms black-box tests inside a dedicated Windows VM. It does **not** run on Vercel and it must run in an interactive, logged-in desktop session.
 
@@ -56,7 +56,7 @@ Then open:
 
 The machine should become `ONLINE` within seconds.
 
-## V1.2 supported actions
+## V1.3 supported actions
 
 - Launch `.exe` with optional arguments.
 - Observe UIA3 tree.
@@ -73,7 +73,7 @@ The machine should become `ONLINE` within seconds.
 ## Guardrails
 
 - Maximum 10 AI observe/action iterations per `act` step.
-- No pixel-coordinate action in V1.2; if UIA does not expose a usable target, the case becomes `BLOCKED` instead of clicking blindly.
+- No pixel-coordinate action in V1.3; if UIA does not expose a usable target, the case becomes `BLOCKED` instead of clicking blindly.
 - Passwords/secrets are not part of the Windows MVP payload.
 - Use a staging/UAT environment and dedicated test data.
 
@@ -98,3 +98,8 @@ Suggested ACs:
 - Customer Code must be unique.
 - After successful creation, a generated Customer Number is shown.
 - Created customer appears in Customer List.
+
+
+## V1.3 Application Memory
+
+After each logical step, the agent sends a compact UI Automation snapshot with the step report. The Vercel control plane deduplicates the current screen, updates useful controls and links navigation transitions. Screenshot binary remains in object storage.

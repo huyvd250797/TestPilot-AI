@@ -21,7 +21,7 @@ public sealed class ControlPlaneClient
     {
         var payload = new {
             runnerId = _settings.RunnerId, name = _settings.RunnerName, machineName = Environment.MachineName,
-            version = "1.2.0", capabilities = new { uiAutomation = "UIA3", engine = "FlaUI 5.0", screenshots = true, semanticActions = true }
+            version = "1.3.0", capabilities = new { uiAutomation = "UIA3", engine = "FlaUI 5.0", screenshots = true, semanticActions = true, applicationMemory = true, uiMap = true }
         };
         await SendOkAsync(HttpMethod.Post, "api/runner/register", payload, ct);
     }
@@ -36,9 +36,9 @@ public sealed class ControlPlaneClient
         return body?.Job;
     }
 
-    public async Task<ResolverResult> ResolveAsync(string kind, string instruction, string? expected, string? captureKey, string windowTitle, IReadOnlyList<UiElementSnapshot> ui, IReadOnlyList<string> history, CancellationToken ct)
+    public async Task<ResolverResult> ResolveAsync(Guid runId, string kind, string instruction, string? expected, string? captureKey, string windowTitle, IReadOnlyList<UiElementSnapshot> ui, IReadOnlyList<string> history, CancellationToken ct)
     {
-        var payload = new { runnerId = _settings.RunnerId, stepKind = kind, instruction, expected, captureKey, windowTitle, ui, actionHistory = history };
+        var payload = new { runnerId = _settings.RunnerId, runId, stepKind = kind, instruction, expected, captureKey, windowTitle, ui, actionHistory = history };
         using var res = await _http.PostAsJsonAsync("api/runner/resolve-action", payload, _json, ct);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<ResolverResult>(_json, ct)) ?? new ResolverResult("BLOCKED", null, null, null, null, null, null, "Empty resolver response.");

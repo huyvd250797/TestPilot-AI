@@ -8,6 +8,7 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
     ["runs", "/runs/new", "Web Runner"],
     ["windows", "/runs/windows", "Windows Runner"],
     ["runners", "/runners", "Runner Machines"],
+    ["memory", "/memory", "Application Memory"],
     ["replay", "/runs/demo", "Replay"],
     ["setup", "/setup", "Setup"],
   ];
@@ -15,7 +16,7 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
     <aside className="side">
       <Link href="/" className="brand"><span>TestPilot</span> AI<small>AI-Powered Black-Box Testing</small></Link>
       <nav className="nav">{links.map(([key, href, label]) => <Link key={key} className={active === key ? "active" : ""} href={href}>{label}</Link>)}</nav>
-      <div className="sideNote"><b>V1.2</b><span>Web + Windows Forms</span><span>Isolated execution</span></div>
+      <div className="sideNote"><b>V1.3</b><span>Application Memory + UI Map</span><span>Web + Windows Forms</span></div>
     </aside>
     <main className="main">{children}</main>
   </div>;

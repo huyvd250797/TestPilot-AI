@@ -4,7 +4,7 @@ export async function GET() {
   const browserbaseApiKey = Boolean(process.env.BROWSERBASE_API_KEY);
   return Response.json({
     name: "TestPilot AI",
-    version: "1.2.0",
+    version: "1.3.0",
     status: "ok",
     services: {
       supabase: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
@@ -12,6 +12,7 @@ export async function GET() {
       webRunner: browserbaseApiKey,
       browserbaseProject: Boolean(process.env.BROWSERBASE_PROJECT_ID),
       windowsControlPlane: Boolean(process.env.RUNNER_SHARED_SECRET),
+      applicationMemory: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
     },
     node: process.version,
   });

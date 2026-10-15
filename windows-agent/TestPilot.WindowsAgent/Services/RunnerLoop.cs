@@ -17,7 +17,7 @@ public sealed class RunnerLoop
     public async Task RunAsync(CancellationToken ct)
     {
         await RetryAsync(() => _api.RegisterAsync(ct), "register", ct);
-        Console.WriteLine($"TestPilot Windows Agent 1.2.0 ONLINE as {_settings.RunnerName} ({_settings.RunnerId})");
+        Console.WriteLine($"TestPilot Windows Agent 1.3.0 ONLINE as {_settings.RunnerName} ({_settings.RunnerId})");
         while (!ct.IsCancellationRequested)
         {
             try
@@ -47,7 +47,7 @@ public sealed class RunnerLoop
         {
             var launchStart = DateTimeOffset.UtcNow;
             session.Launch(job.Payload.AppPath, job.Payload.AppArgs);
-            await _api.ReportStepAsync(job.Id, new StepReport(_settings.RunnerId, job.RunId, 0, "act", $"Launch {job.Payload.AppPath}", "Application opens with an accessible main window", $"Main window: {session.WindowTitle}", "PASS", null, SafeScreenshot(session), launchStart.ToString("O"), DateTimeOffset.UtcNow.ToString("O")), ct);
+            await _api.ReportStepAsync(job.Id, new StepReport(_settings.RunnerId, job.RunId, 0, "act", $"Launch {job.Payload.AppPath}", "Application opens with an accessible main window", $"Main window: {session.WindowTitle}", "PASS", null, SafeScreenshot(session), session.WindowTitle, session.Snapshot(), launchStart.ToString("O"), DateTimeOffset.UtcNow.ToString("O")), ct);
 
             for (var i = 0; i < job.Payload.TestCase.Steps.Length; i++)
             {
@@ -60,15 +60,15 @@ public sealed class RunnerLoop
                 {
                     (actual, result, captured) = source.Kind.ToLowerInvariant() switch
                     {
-                        "act" => await ExecuteActAsync(session, instruction, expected, ct),
-                        "capture" => await ExecuteCaptureAsync(session, instruction, expected, source.CaptureKey, runtime, ct),
-                        "verify" => await ExecuteVerifyAsync(session, instruction, expected, ct),
+                        "act" => await ExecuteActAsync(job.RunId, session, instruction, expected, ct),
+                        "capture" => await ExecuteCaptureAsync(job.RunId, session, instruction, expected, source.CaptureKey, runtime, ct),
+                        "verify" => await ExecuteVerifyAsync(job.RunId, session, instruction, expected, ct),
                         _ => ($"Unsupported step kind: {source.Kind}", "BLOCKED", null),
                     };
                 }
                 catch (Exception ex) { actual = ex.Message; result = "BLOCKED"; captured = null; }
 
-                await _api.ReportStepAsync(job.Id, new StepReport(_settings.RunnerId, job.RunId, stepNo, source.Kind.ToLowerInvariant(), instruction, expected, actual, result, captured, SafeScreenshot(session), started.ToString("O"), DateTimeOffset.UtcNow.ToString("O")), ct);
+                await _api.ReportStepAsync(job.Id, new StepReport(_settings.RunnerId, job.RunId, stepNo, source.Kind.ToLowerInvariant(), instruction, expected, actual, result, captured, SafeScreenshot(session), session.WindowTitle, session.Snapshot(), started.ToString("O"), DateTimeOffset.UtcNow.ToString("O")), ct);
                 Console.WriteLine($"  Step {stepNo}: {result} - {instruction}");
                 if (result == "BLOCKED") { final = "BLOCKED"; finalError = actual; break; }
                 if (result == "FAIL") final = "FAIL";
@@ -83,12 +83,12 @@ public sealed class RunnerLoop
         }
     }
 
-    private async Task<(string actual,string result,Dictionary<string,object>? captured)> ExecuteActAsync(WindowsAutomationSession session, string instruction, string expected, CancellationToken ct)
+    private async Task<(string actual,string result,Dictionary<string,object>? captured)> ExecuteActAsync(Guid runId, WindowsAutomationSession session, string instruction, string expected, CancellationToken ct)
     {
         var history = new List<string>();
         for (var attempt = 0; attempt < 10; attempt++)
         {
-            var resolution = await _api.ResolveAsync("act", instruction, expected, null, session.WindowTitle, session.Snapshot(), history, ct);
+            var resolution = await _api.ResolveAsync(runId, "act", instruction, expected, null, session.WindowTitle, session.Snapshot(), history, ct);
             switch (resolution.Outcome.ToUpperInvariant())
             {
                 case "DONE": return (resolution.Actual ?? "Action goal achieved.", "PASS", null);
@@ -102,9 +102,9 @@ public sealed class RunnerLoop
         return ("Action guardrail reached 10 observe/action iterations without completing the step.", "BLOCKED", null);
     }
 
-    private async Task<(string actual,string result,Dictionary<string,object>? captured)> ExecuteCaptureAsync(WindowsAutomationSession session, string instruction, string expected, string? captureKey, Dictionary<string,string> runtime, CancellationToken ct)
+    private async Task<(string actual,string result,Dictionary<string,object>? captured)> ExecuteCaptureAsync(Guid runId, WindowsAutomationSession session, string instruction, string expected, string? captureKey, Dictionary<string,string> runtime, CancellationToken ct)
     {
-        var resolution = await _api.ResolveAsync("capture", instruction, expected, captureKey, session.WindowTitle, session.Snapshot(), Array.Empty<string>(), ct);
+        var resolution = await _api.ResolveAsync(runId, "capture", instruction, expected, captureKey, session.WindowTitle, session.Snapshot(), Array.Empty<string>(), ct);
         if (resolution.Outcome == "BLOCKED") return (resolution.Reason ?? "Capture target could not be determined.", "BLOCKED", null);
         if (resolution.Outcome != "CAPTURE" || resolution.Target is null) return ("Resolver did not return a capture target.", "BLOCKED", null);
         var value = session.CaptureValue(resolution.Target, resolution.CaptureProperty);
@@ -113,9 +113,9 @@ public sealed class RunnerLoop
         return ($"Captured {(captureKey ?? "value")} = {value}", "PASS", captured);
     }
 
-    private async Task<(string actual,string result,Dictionary<string,object>? captured)> ExecuteVerifyAsync(WindowsAutomationSession session, string instruction, string expected, CancellationToken ct)
+    private async Task<(string actual,string result,Dictionary<string,object>? captured)> ExecuteVerifyAsync(Guid runId, WindowsAutomationSession session, string instruction, string expected, CancellationToken ct)
     {
-        var resolution = await _api.ResolveAsync("verify", instruction, expected, null, session.WindowTitle, session.Snapshot(), Array.Empty<string>(), ct);
+        var resolution = await _api.ResolveAsync(runId, "verify", instruction, expected, null, session.WindowTitle, session.Snapshot(), Array.Empty<string>(), ct);
         if (resolution.Outcome == "BLOCKED") return (resolution.Reason ?? "Checkpoint is not observable in the current UI.", "BLOCKED", null);
         if (resolution.Outcome != "VERIFY" || resolution.Passed is null) return ("Resolver did not return a verification decision.", "BLOCKED", null);
         var actual = string.Join(" — ", new[]{resolution.Actual,resolution.Evidence}.Where(x=>!string.IsNullOrWhiteSpace(x)).Select(x=>x!));

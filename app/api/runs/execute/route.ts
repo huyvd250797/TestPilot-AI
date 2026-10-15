@@ -59,10 +59,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const output = await executeWebCase({ runId, targetUrl: parsed.data.targetUrl, testCase: parsed.data.case, credentials: parsed.data.credentials });
+    const output = await executeWebCase({ runId, targetUrl: parsed.data.targetUrl, testCase: parsed.data.case, credentials: parsed.data.credentials, projectId: parsed.data.projectId, environmentId: parsed.data.environmentId });
     if (db) {
       await db.from("test_runs").update({ status: output.result, runtime_context: output.runtime, browser_session_id: output.sessionId, replay_url: output.replayUrl, completed_at: new Date().toISOString() }).eq("id", runId);
-      if (output.steps.length) await db.from("execution_steps").insert(output.steps.map((s) => ({ run_id: runId, step_no: s.stepNo, intent: s.instruction, action_type: s.kind.toUpperCase(), expected: s.expected ? { text: s.expected } : {}, actual: { text: s.actual }, result: s.result, after_asset_url: s.screenshotUrl || null, started_at: s.startedAt, ended_at: s.endedAt })));
+      if (output.steps.length) await db.from("execution_steps").insert(output.steps.map((s) => ({ run_id: runId, step_no: s.stepNo, intent: s.instruction, action_type: s.kind.toUpperCase(), expected: s.expected ? { text: s.expected } : {}, actual: { text: s.actual }, result: s.result, after_asset_url: s.screenshotUrl || null, started_at: s.startedAt, ended_at: s.endedAt, memory_screen_id: s.memoryScreenId || null, memory_fingerprint: s.memoryFingerprint || null })));
     }
     return Response.json({ runId, platform: "web", ...output });
   } catch (error) {

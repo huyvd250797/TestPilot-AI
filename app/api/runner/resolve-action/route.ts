@@ -2,6 +2,8 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { WindowsResolverResultSchema } from "@/lib/contracts";
 import { isRunnerAuthorized, runnerUnauthorized } from "@/lib/runner-auth";
+import { findMemoryContext } from "@/lib/application-memory";
+import { adminDb } from "@/lib/supabase";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -17,6 +19,7 @@ const UiElement = z.object({
 
 const Body = z.object({
   runnerId: z.string().uuid(),
+  runId: z.string().uuid().optional(),
   stepKind: z.enum(["act", "verify", "capture"]),
   instruction: z.string().min(1),
   expected: z.string().optional(),
@@ -34,7 +37,16 @@ export async function POST(req: Request) {
   }
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  let memoryContext: unknown = null;
+  if (body.runId) {
+    try {
+      const db = adminDb();
+      const { data: run } = db ? await db.from("test_runs").select("project_id,environment_id").eq("id", body.runId).maybeSingle() : { data: null as any };
+      memoryContext = await findMemoryContext({ projectId: run?.project_id, environmentId: run?.environment_id, platform: "windows", name: body.windowTitle || "Windows application", locationHint: body.windowTitle, elements: body.ui });
+    } catch (e) { console.error("Application Memory lookup failed", e); }
+  }
   const uiJson = JSON.stringify(body.ui).slice(0, 45_000);
+  const memoryJson = JSON.stringify(memoryContext || {}).slice(0, 12_000);
   const response = await client.responses.create({
     model: process.env.OPENAI_MODEL || "gpt-5.6",
     input: `You are TestPilot AI Windows UI controller. You are controlling an authorized WinForms test application only through a semantic UI Automation snapshot.
@@ -66,7 +78,7 @@ Instruction: ${body.instruction}
 Expected: ${body.expected || "not specified"}
 Capture key: ${body.captureKey || "none"}
 Action history: ${body.actionHistory.join(" | ") || "none"}
-UI snapshot: ${uiJson}`,
+Known Application Memory for this screen (advisory only; current UI always wins): ${memoryJson}\nUI snapshot: ${uiJson}`,
   });
 
   const match = response.output_text.match(/\{[\s\S]*\}/);

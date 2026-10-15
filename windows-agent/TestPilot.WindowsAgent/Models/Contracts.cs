@@ -46,4 +46,4 @@ public sealed record ResolverResult(string Outcome, ResolverCommand? Command, Co
 public sealed record StepReport(
     Guid RunnerId, Guid RunId, int StepNo, string Kind, string Instruction, string? Expected,
     string Actual, string Result, Dictionary<string,object>? CapturedOutput, string? ScreenshotBase64,
-    string StartedAt, string EndedAt);
+    string? WindowTitle, IReadOnlyList<UiElementSnapshot>? UiSnapshot, string StartedAt, string EndedAt);

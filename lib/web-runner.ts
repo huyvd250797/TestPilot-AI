@@ -4,6 +4,7 @@ import { browserbase, Stagehand } from "@browserbasehq/stagehand";
 import { z } from "zod/v4";
 import type { PlannedCase } from "./contracts";
 import { saveScreenshot } from "./evidence";
+import { rememberNavigation, rememberScreenObservation } from "./application-memory";
 
 export type ExecutedStep = {
   stepNo: number;
@@ -15,10 +16,49 @@ export type ExecutedStep = {
   screenshotUrl?: string;
   startedAt: string;
   endedAt: string;
+  memoryScreenId?: string;
+  memoryFingerprint?: string;
 };
 
 function applyVars(text: string, vars: Record<string, string>) {
   return text.replace(/\$\{([^}]+)\}/g, (_, k) => vars[k] ?? ("${" + k + "}"));
+}
+
+async function captureWebUi(page: any) {
+  try {
+    const data = await page.evaluate(() => {
+      const selectorFor = (el: Element) => {
+        const id = (el as HTMLElement).id;
+        if (id) return `#${id}`;
+        const name = el.getAttribute("name");
+        if (name) return `${el.tagName.toLowerCase()}[name="${name.replace(/"/g, '\\"')}"]`;
+        const testId = el.getAttribute("data-testid");
+        if (testId) return `[data-testid="${testId.replace(/"/g, '\\"')}"]`;
+        return "";
+      };
+      const nodes = Array.from(document.querySelectorAll("button,input,select,textarea,a,[role],[data-testid]"));
+      return {
+        name: document.title || location.pathname || "Web page",
+        locationHint: location.href,
+        elements: nodes.slice(0, 180).map((el) => {
+          const h = el as HTMLElement; const input = el as HTMLInputElement;
+          return {
+            automationId: el.getAttribute("data-testid") || h.id || null,
+            name: el.getAttribute("aria-label") || el.getAttribute("title") || (h.innerText || "").trim().slice(0, 120) || el.getAttribute("name") || el.getAttribute("placeholder"),
+            role: el.getAttribute("role") || el.tagName.toLowerCase(),
+            controlType: el.tagName.toLowerCase(),
+            className: h.className && typeof h.className === "string" ? h.className.slice(0, 160) : null,
+            selector: selectorFor(el),
+            placeholder: el.getAttribute("placeholder"),
+            inputType: input.type || null,
+            enabled: !(input.disabled),
+            offscreen: false,
+          };
+        }),
+      };
+    });
+    return data as { name:string; locationHint:string; elements:any[] };
+  } catch { return null; }
 }
 
 export async function executeWebCase(args: {
@@ -26,6 +66,8 @@ export async function executeWebCase(args: {
   targetUrl: string;
   testCase: PlannedCase;
   credentials?: { username?: string; password?: string };
+  projectId?: string;
+  environmentId?: string;
 }) {
   const apiKey = process.env.BROWSERBASE_API_KEY;
   if (!apiKey) {
@@ -46,6 +88,8 @@ export async function executeWebCase(args: {
   const runtime: Record<string, string> = { ...args.testCase.testData };
   const steps: ExecutedStep[] = [];
   let stagehand: Stagehand | undefined;
+  let previousMemoryScreenId: string | null = null;
+  let previousMemoryAction = "Open target application";
 
   try {
     // No model is passed here intentionally: Stagehand uses Browserbase Model
@@ -100,17 +144,22 @@ export async function executeWebCase(args: {
         }
 
         const shot = await page.screenshot({ type: "png" });
+        const loginScreenshotUrl = await saveScreenshot(args.runId, 0, Buffer.from(shot));
+        let loginMemory: Awaited<ReturnType<typeof rememberScreenObservation>> = null;
+        const loginUi = await captureWebUi(page);
+        if (loginUi && args.projectId) {
+          try { loginMemory = await rememberScreenObservation({ projectId: args.projectId, environmentId: args.environmentId, platform: "web", ...loginUi, screenshotUrl: loginScreenshotUrl, successfulUse: true }); } catch {}
+        }
+        if (loginMemory?.screenId) previousMemoryScreenId = loginMemory.screenId;
         steps.push({
           stepNo: 0,
           kind: "act",
           instruction: "Login with test account",
           actual: "Login interaction completed",
           result: "PASS",
-          screenshotUrl: await saveScreenshot(
-            args.runId,
-            0,
-            Buffer.from(shot),
-          ),
+          screenshotUrl: loginScreenshotUrl,
+          memoryScreenId: loginMemory?.screenId,
+          memoryFingerprint: loginMemory?.fingerprint,
           startedAt: loginStarted,
           endedAt: new Date().toISOString(),
         });
@@ -187,6 +236,19 @@ export async function executeWebCase(args: {
         // Evidence upload failure must not erase the execution result.
       }
 
+      let stepMemory: Awaited<ReturnType<typeof rememberScreenObservation>> = null;
+      const uiMemory = await captureWebUi(page);
+      if (uiMemory && args.projectId) {
+        try {
+          stepMemory = await rememberScreenObservation({ projectId: args.projectId, environmentId: args.environmentId, platform: "web", ...uiMemory, screenshotUrl: screenshotUrl || null, successfulUse: result === "PASS" });
+          if (previousMemoryScreenId && stepMemory?.screenId && previousMemoryScreenId !== stepMemory.screenId) {
+            await rememberNavigation({ projectId: args.projectId, environmentId: args.environmentId, platform: "web", fromScreenId: previousMemoryScreenId, toScreenId: stepMemory.screenId, actionType: source.kind.toUpperCase(), actionSignature: previousMemoryAction, success: result !== "BLOCKED" });
+          }
+          if (stepMemory?.screenId) previousMemoryScreenId = stepMemory.screenId;
+          previousMemoryAction = instruction;
+        } catch {}
+      }
+
       steps.push({
         stepNo,
         kind: source.kind,
@@ -197,6 +259,8 @@ export async function executeWebCase(args: {
         screenshotUrl,
         startedAt,
         endedAt: new Date().toISOString(),
+        memoryScreenId: stepMemory?.screenId,
+        memoryFingerprint: stepMemory?.fingerprint,
       });
 
       if (result === "BLOCKED") break;

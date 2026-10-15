@@ -8,8 +8,8 @@ internal static class Program
     [STAThread]
     private static async Task<int> Main()
     {
-        Console.Title = "TestPilot Windows Agent 1.2";
-        Console.WriteLine("TestPilot AI · Windows Forms Runner MVP");
+        Console.Title = "TestPilot Windows Agent 1.3";
+        Console.WriteLine("TestPilot AI · Application Memory + Windows Runner");
         Console.WriteLine("IMPORTANT: keep this VM user session logged in and unlocked while tests run.\n");
         try
         {

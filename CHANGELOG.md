@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.0 — Application Memory & UI Map
+
+- Added canonical screen memory for Web and Windows execution.
+- Added semantic screen identity, SHA-256 fingerprinting and deduplication.
+- Added screen versioning only when UI fingerprints change.
+- Added useful-control memory with confidence and seen counters.
+- Added learned navigation graph between screens.
+- Added `/memory` dashboard with screen, version, control and navigation statistics.
+- Added memory maintenance for stale-screen marking and version pruning.
+- Linked execution steps to `memory_screen_id` and `memory_fingerprint`.
+- Fed known Windows controls/navigation back into the semantic resolver as advisory context.
+- Kept binary screenshot/video data out of PostgreSQL; memory stores metadata and object-storage URLs only.
+- Upgraded Windows Agent protocol/version to 1.3.0.
+
 ## 1.2.0 — Windows Forms Runner MVP
 
 - Added .NET 10 Windows Agent with FlaUI UIA3 semantic desktop automation.
